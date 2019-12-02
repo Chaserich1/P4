@@ -1,9 +1,9 @@
 #Chase Richards
-#CMPSCI 4280 P3
+#CMPSCI 4280 P4
 #Filename: makefile
 
-P2: main.cpp parser.cpp scanner.cpp semantics.cpp testTree.cpp
-	g++ -std=c++0x -Wall -g -o statSem main.cpp parser.cpp scanner.cpp semantics.cpp testTree.cpp
+P2: main.cpp parser.cpp scanner.cpp semantics.cpp
+	g++ -std=c++0x -Wall -g -o compile main.cpp parser.cpp scanner.cpp semantics.cpp
 
 clean:
-	rm statSem keyboard.txt
+	rm compile keyboard.txt

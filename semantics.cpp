@@ -2,17 +2,67 @@
 //CMPSCI 4280 P3
 //Filename: semantics.cpp
 
-#include "semantics.h"
 #include <iostream>
+#include <string>
+#include "semantics.h"
+using namespace std;
 
 //max stack is 100
 const int maxStack = 100;
 //stack of tokens as an array
 Token stack[maxStack];
 
-
 int totVarCount = 0; //keep track of the total number of variables
 int currScpFirstEle = 0; //keep track of the starting position of current scope
+
+/*
+int varCount = 0;
+char newVar[9];
+int labelCount = 0;
+char newLabel[9];
+char* varsCreated[1000];
+int varsCreatedCount = 0;
+void varCreator(char* code);
+char* tempVarCreator();
+char* labelCreator(); 
+
+char* tempVarCreator(){
+    sprintf(newVar, "TV%d", varCount);
+    varCount++;
+    return newVar;
+}
+
+char* labelCreator(){
+    sprintf(newLabel, "L%d", labelCount);
+    labelCount++;
+    return newLabel;
+}
+
+void varCreator(char* code){
+    varsCreated[varsCreatedCount] = code;
+    varsCreatedCount++;
+    return;
+}
+*/
+static int varTempCounter = 0;
+static int labelCounter = 0;
+string tempVarsCreated[maxStack];
+
+void varTempArrays(){
+   for(int i = 0; i <= maxStack; i++)
+      tempVarsCreated[i] = "";
+}
+string getVarTemp(){
+   string tempVarCreated = "TV" + to_string(varTempCounter + 1);
+   tempVarsCreated[varTempCounter] = tempVarCreated;
+   varTempCounter++;
+   return tempVarCreated;
+}
+string getLabel(){
+   string labelCreated = "L" + to_string(labelCounter + 1);
+   labelCounter++;
+   return labelCreated;
+}
 
 //Push onto the stack
 void push(Token tkn){
@@ -29,6 +79,7 @@ void push(Token tkn){
          }
       }
       stack[totVarCount] = tkn; //set tkn to the total variable count in the stack
+      outFile << "PUSH\n";
       totVarCount++; //increment the total variable count
    }
 }
@@ -40,6 +91,7 @@ void pop(int currScpFirstEle){
    //Start at the top of the stack and go through the current scope
    for(int i = totVarCount; i > currScpFirstEle; i--){
       totVarCount--; //decrement total variable count
+      outFile << "POP\n";
       stack[i].stringToken == ""; 
    }
 }
@@ -82,6 +134,11 @@ void semantics(Node* node, int counter){
       currScpFirstEle = totVarCount;
       semantics(node -> firstChild, varCount);
       semantics(node -> secondChild, varCount);
+      outFile << "STOP\n";
+      for(int i = 0; i < maxStack; i++){
+         if(tempVarsCreated[i] != "")
+            outFile << tempVarsCreated[i] << " 0\n";
+      }
    }else if(node -> nonTerminal == "<block>"){ //block nonTerminal
          int varCount = 0; //set varCount to 0 for this block
          //set first item in the scope equal to total variable count
@@ -112,7 +169,10 @@ void semantics(Node* node, int counter){
       //if there is a plus token then we have <A>+<expr>
       if(node -> firstToken.identiToken == PlusTk){
          semantics(node -> firstChild, counter);
+         string tempVarCreated = getVarTemp();
+         outFile << "STORE " << tempVarCreated << "\n";
          semantics(node -> secondChild, counter);
+         outFile << "ADD " << tempVarCreated << "\n";
       }else{ //no plus token then we just have <A>
          semantics(node -> firstChild, counter);
       }
@@ -120,40 +180,142 @@ void semantics(Node* node, int counter){
       //if there is a minus token then we have <N>-<A>
       if(node -> firstToken.identiToken == MinusTk){
          semantics(node -> firstChild, counter);
+         string tempVarCreated = getVarTemp();
+         outFile << "STORE " << tempVarCreated << "\n";
          semantics(node -> secondChild, counter);
+         outFile << "SUB " << tempVarCreated << "\n";
       }else{ //otherwise we just have <N>
          semantics(node -> firstChild, counter);
       }
    }else if(node -> nonTerminal == "<N>"){ //N nonTerminal
       //if we have a divide or mult token then we have either <M>/<N> or <M>*<N>
-      if(node -> firstToken.identiToken == DivideTk || node -> firstToken.identiToken == MultiplicationTk){
-         semantics(node -> firstChild, counter);
+      if(node -> firstToken.identiToken == DivideTk){
          semantics(node -> secondChild, counter);
+         string tempVarCreated = getVarTemp();
+         outFile << "STORE " << tempVarCreated << "\n";
+         semantics(node -> firstChild, counter);
+         outFile << "DIV " << tempVarCreated << "\n";
+      }else if(node -> firstToken.identiToken == MultiplicationTk){
+         semantics(node -> secondChild, counter);
+         string tempVarCreated = getVarTemp();
+         outFile << "STORE " << tempVarCreated << "\n";
+         semantics(node -> firstChild, counter);
+         outFile << "MULT " << tempVarCreated << "\n";
       }else{ //otherwise we just have <M>
+         semantics(node -> firstChild, counter);
+      }
+   }else if(node -> nonTerminal == "<M>"){
+      if(node -> firstToken.identiToken == MinusTk){
+         semantics(node -> firstChild, counter);
+         outFile << "MULT -1\n";
+      }else{
          semantics(node -> firstChild, counter);
       }
    }else if(node -> nonTerminal == "<R>"){ //R nonTerminal
       //if we have an identifier check to see if it has been declared in the current scope
       if(node -> firstToken.identiToken == IdTk){
+         int locationOfVar = duplicateVarCheck(node -> firstToken);
          if(!duplicateVarCheck(node -> firstToken)){
             cout << "Error: " << node -> firstToken.stringToken << " not yet declared in current scope" << endl;
          }
+         outFile << "STACKR " << locationOfVar << "\n";
+      }else if(node -> firstToken.identiToken == IntTk){
+         outFile << "LOAD " << node -> firstToken.stringToken << "\n";
       }else{
          //<expr> 
          semantics(node -> firstChild, counter);
       }
    }else if(node -> nonTerminal == "<in>"){ //in nonTerminal
+      int locationOfVar = duplicateVarCheck(node -> firstToken); 
       if(!duplicateVarCheck(node -> firstToken)){ //check if the identifier has been declared in this scope
          cout << "Error:" << node -> firstToken.stringToken << " hasn't been declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
+      string tempVarCreated = getVarTemp();
+      outFile << "READ " << tempVarCreated << "\n";
+      outFile << "LOAD " << tempVarCreated << "\n";
+      outFile << "STACKW " << locationOfVar << "\n";
+   }else if(node -> nonTerminal == "<out>"){
+      semantics(node -> firstChild, counter);
+      string tempVarCreated = getVarTemp();
+      outFile << "STORE " << tempVarCreated << "\n";
+      outFile << "WRITE " << tempVarCreated << "\n";
+   }else if(node -> nonTerminal == "<if>"){
+      idTokens firstIfOperator = node -> secondChild -> firstToken.identiToken;
+      idTokens secondIfOperator = node -> secondChild -> secondToken.identiToken;
+      semantics(node -> thirdChild, counter);
+      string tempVarCreated = getVarTemp();
+      outFile << "STORE " << tempVarCreated << "\n";
+      semantics(node -> firstChild, counter);
+      outFile << "SUB " << tempVarCreated << "\n";
+      string labelCreated = getLabel();
+      //figure out which RO operator it is
+      if(firstIfOperator == LessThanTk){
+         if(secondIfOperator == LessThanTk){
+            outFile << "BRPOS " << labelCreated << "\n";
+         }else if(secondIfOperator == GreaterThanTk){
+/**********/outFile << "BRZERO " << labelCreated << "\n";
+         }else{
+            outFile << "BRZPOS " << labelCreated << "\n";
+         }
+      }else if(firstIfOperator == GreaterThanTk){
+         if(secondIfOperator == GreaterThanTk){
+            outFile << "BRNEG " << labelCreated << "\n";
+         }else{
+            outFile << "BRZNEG " << labelCreated << "\n";
+         }
+      }else if(firstIfOperator == EqualsTk){
+         outFile << "BRPOS " << labelCreated << "\n";
+         outFile << "BRNEG " << labelCreated << "\n";
+      }
+      if(node -> fourthChild != nullptr){
+         semantics(node -> fourthChild, counter);
+      }
+      outFile << labelCreated << ": NOOP\n";
+   }else if(node -> nonTerminal == "<loop>"){
+      idTokens firstIfOperator = node -> secondChild -> firstToken.identiToken;
+      idTokens secondIfOperator = node -> secondChild -> secondToken.identiToken;
+      string tempVarCreated = getVarTemp();
+      string startLabelCreated = getLabel();
+      string stopLabelCreated = getLabel();
+      outFile << startLabelCreated << ": NOOP\n";
+      if(node -> thirdChild != nullptr){
+         semantics(node -> thirdChild, counter);
+      }
+      outFile << "STORE " << tempVarCreated << "\n";
+      semantics(node -> firstChild, counter);
+      outFile << "SUB " << tempVarCreated << "\n";
+      //figure out which ro operator is used
+      if(firstIfOperator == LessThanTk){
+         if(secondIfOperator == LessThanTk){
+            outFile << "BRPOS " << stopLabelCreated << "\n";
+         }else if(secondIfOperator == GreaterThanTk){
+/**********/outFile << "BRZERO " << stopLabelCreated << "\n";
+         }else{
+            outFile << "BRZPOS " << stopLabelCreated << "\n";
+         }
+      }else if(firstIfOperator == GreaterThanTk){
+         if(secondIfOperator == GreaterThanTk){
+            outFile << "BRNEG " << stopLabelCreated << "\n";                                                   }else{                                                                                                   outFile << "BRZNEG " << stopLabelCreated << "\n";
+         }
+      }else if(firstIfOperator == EqualsTk){
+         outFile << "BRPOS " << stopLabelCreated << "\n";
+         outFile << "BRNEG " << stopLabelCreated << "\n";
+      }
+      if(node -> fourthChild != nullptr){
+         semantics(node -> fourthChild, counter);
+      }
+      outFile << "BR " << startLabelCreated << "\n";
+      outFile << stopLabelCreated << ": NOOP\n";
    }else if(node -> nonTerminal == "<assign>"){ //assign nonTerminal
+      //<expr>
+      semantics(node -> firstChild, counter);
+      int locationOfVar = duplicateVarCheck(node -> firstToken);
       if(!duplicateVarCheck(node -> firstToken)){ //check if the identifier has been declared in this scope
          cout << "Error: " << node -> firstToken.stringToken << " hasn't been declared in current scope" << endl;
          exit(EXIT_FAILURE);
       }
-      //<expr>
-      semantics(node -> firstChild, counter);
+      outFile << "STACKW " << locationOfVar << "\n";
    }else{
       semantics(node -> firstChild, counter);
       semantics(node -> secondChild, counter);

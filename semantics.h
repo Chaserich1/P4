@@ -5,8 +5,11 @@
 #ifndef SEMANTICS_H
 #define SEMANTICS_H
 
+#include <fstream>
 #include "node.h"
 #include "token.h"
+
+extern ofstream outFile;
 
 //push and pop
 void push(Token tkn);

@@ -1,0 +1,4 @@
+start
+  x1 < < 1 ;
+  out x1 ;
+stop

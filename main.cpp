@@ -1,15 +1,15 @@
 //Chase Richards
-//CMPSCI 4280 P3
+//CMPSCI 4280 P4
 //Filename: main.cpp
 
 #include <iostream>
 #include <string>
 #include <fstream>
 #include "parser.h"
-#include "testTree.h"
 #include "semantics.h"
 using namespace std;
 
+ofstream outFile;
 int main (int argc, char** argv){
    
    //Make sure there are not more than 2 arguments
@@ -20,10 +20,11 @@ int main (int argc, char** argv){
 
    //if a filename was included in the arguments
    else if(argc == 2){
-      string file = argv[1];
-      //add extension .fs19 and open the file
-      inFile.open(file + ".fs19");
       
+      string file = argv[1];
+      //add extension .fs19 and open the files
+      inFile.open(file + ".fs19");
+      outFile.open(file + ".asm");
       //if the file isn't opened
       if(!inFile){
          cout << "Program error file not found" << endl;
@@ -35,6 +36,7 @@ int main (int argc, char** argv){
       semantics(node, 0);
 
       inFile.close();
+      outFile.close();
    }
 
    //if there is no file argument, take keyboard input
@@ -42,6 +44,7 @@ int main (int argc, char** argv){
       
       //Create the file that will contain the keyboard input
       ofstream keyInputFile;
+      
       //open the file
       keyInputFile.open("keyboard.txt");
       
@@ -67,11 +70,19 @@ int main (int argc, char** argv){
          return 0;
       }
       
+      //open the output asm file and give program error if unsuccessful
+      outFile.open("kb.asm");
+      if(!outFile){
+         cout << "Program error kb.asm not opened" << endl;
+         return 0;
+      }
+      
       Node* node = parser();
       //treePrinted(node);
       semantics(node, 0);
    
       inFile.close();
+      outFile.close();
    }
 }
          
