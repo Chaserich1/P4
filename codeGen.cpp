@@ -3,8 +3,6 @@
 #include <fstream>
 #include "codeGen.h"
 
-FILE* outFile;
-
 int varCounter = 0;
 char newVar[9];
 
@@ -25,6 +23,7 @@ void generateBlock (Node * node);
 void generateVars (Node * node);
 void generateExpr (Node * node);
 void generateA (Node * node);
+void generateN(Node* node);
 void generateM (Node * node);
 void generateR (Node * node);
 void generateStats (Node * node);
@@ -36,85 +35,98 @@ void generateIfGram (Node * node);
 void generateLoop (Node * node);
 void generateAssign (Node * node);
 
-void printNode (Node * node);
+//void printNode (Node * node);
 
 void generateCode(Node* node) {
-        std::cout << "Starting Code Generation:\n";
-        if (node == NULL) {
-            return; 
-        }
-        generateProgram(node);
-        fprintf(outFile, "STOP\n");
-        printVarsToFile();
+   if(node == NULL){
+      return; 
+   }
+   generateProgram(node);
+   outFile << "STOP \n";
+   printVarsToFile();
 }
 
-void generateProgram (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-
-    generateVars(node->firstChild);
-    generateBlock(node->secondChild);
-    return;
+void generateProgram(Node* node){
+   if(node == NULL){
+      return; 
+   }
+   generateVars(node->firstChild);
+   generateBlock(node->secondChild);
+   return;
 }
 
-void generateBlock (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    
-    generateVars(node->firstChild);
-    generateStats(node->secondChild);
-    return;
+void generateBlock(Node* node){
+   if(node == NULL){
+      return; 
+   }
+   generateVars(node->firstChild);
+   generateStats(node->secondChild);
+   return;
 }
 
-void generateVars (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    createVar(node->firstToken.identiToken);
-    generateVars(node->firstChild);
-    return;
+void generateVars(Node* node){
+   if(node == NULL){
+      return; 
+   }
+   createVar(node->firstToken.tokenInstance);
+   generateVars(node->firstChild);
+   return;
 }
 
-void generateExpr (Node * node){
+void generateExpr(Node* node){
+   if(node == NULL){
+      return; 
+   }
+
+   if (node->secondChild != NULL) {
+      generateExpr(node->secondChild);
+      char* tempVar = createTempVar();
+      outFile << "STORE " << tempVar << "\n";
+      generateA(node->firstChild);
+      if (node -> firstToken.identiToken == PlusTk) {
+         outFile << "ADD " << tempVar << "\n";
+         return;
+      }
+   }else{
+      generateA(node->firstChild);
+      return;
+   }
+}
+
+void generateA(Node* node){
+   if(node == NULL){
+      return;
+   }
+   if(node -> secondChild != NULL){
+      generateA(node -> secondChild);
+      char* tempVar = createTempVar();
+      outFile << "STORE " << tempVar << "\n";
+      generateN(node -> firstChild);
+      if(node -> firstToken.identiToken == MinusTk){
+         outFile << "SUB " << tempVar << "\n";
+         return;
+      }
+   }else{
+      generateN(node -> firstChild);
+      return;
+   }
+}
+
+void generateN (Node* node) {
     if (node == NULL) {
         return; 
     }
 
     if (node->secondChild != NULL) {
-        generateExpr(node->secondChild);
+        generateN(node->secondChild);
         char* tempVar = createTempVar();
-        fprintf(outFile, "STORE %s\n", tempVar);
-        generateA(node->firstChild);
-        if (strcmp(node->firstToken.identiToken, (char*)"/") == 0) {
-            fprintf(outFile, "DIV %s\n", tempVar);
+        outFile << "STORE " << tempVar << "\n";
+        generateM(node -> firstChild);
+        if (node -> firstToken.identiToken == DivideTk){
+            outFile << "DIV " << tempVar << "\n";
             return;
         } else {
-            fprintf(outFile, "MULT %s\n", tempVar);
-            return;
-        }
-    } else {
-        generateA(node->firstChild);
-        return;
-    }
-}
-
-void generateA (Node * node) {
-    if (node == NULL) {
-        return; 
-    }
-
-    if (node->secondChild != NULL) {
-        generateA(node->secondChild);
-        char* tempVar = createTempVar();
-        fprintf(outFile, "STORE %s\n", tempVar);
-        generateM(node->firstChild);
-        if (strcmp(node->firstToken.identiToken, (char*)"+") == 0) {
-            fprintf(outFile, "ADD %s\n", tempVar);
-            return;
-        } else {
-            fprintf(outFile, "SUB %s\n", tempVar);
+            outFile << "MULT " << tempVar << "\n";
             return;
         }
     } else {
@@ -129,14 +141,14 @@ void generateM (Node * node){
         return; 
     }
     
-    if(node->firstChild->nodeType == eR){
-        generateR(node->firstChild);
-        return;
-    } else {
-        generateM(node->firstChild);
-        fprintf(outFile, "MULT -1\n");
-        return;
-    }
+    if(node -> firstToken.identiToken == MinusTk){
+      generateM(node -> firstChild);
+      outFile << "MULT -1\n";
+      return;
+    }else{
+      generateR(node -> firstChild);
+      return;
+   }
 }
 
 void generateR (Node * node){
@@ -146,11 +158,11 @@ void generateR (Node * node){
     if(node->firstChild != NULL){
         generateExpr(node->firstChild);
         return;
-    } else if (node->firstToken.tokenId == idTk) {
-        fprintf(outFile, "LOAD %s\n", node->firstToken.identiToken);
+    } else if (node->firstToken.identiToken == IdTk) {
+         outFile << "LOAD " << node -> firstToken.stringToken << "\n";
         return;
-    } else if (node->firstToken.tokenId == intTk) {
-        fprintf(outFile, "LOAD %s\n", node->firstToken.identiToken);
+    } else if (node->firstToken.identiToken == IntTk) {
+         outFile << "LOAD " << node -> firstToken.stringToken << "\n";
         return;
     }
 }
@@ -182,22 +194,22 @@ void generateStat (Node * node){
     if (node == NULL) {
         return; 
     }
-    if (node->firstChild->nodeType == eIn){
+    if (node->firstChild->nonTerminal == "<in>"){
         generateIn(node->firstChild);
         return;
-    } else if (node->firstChild->nodeType == eOut){
+    } else if (node->firstChild->nonTerminal == "<out>"){
         generateOut(node->firstChild);
         return;
-    } else if (node->firstChild->nodeType == eBlock){
+    } else if (node->firstChild->nonTerminal == "<block>"){
         generateBlock(node->firstChild);
         return;
-    } else if (node->firstChild->nodeType == eIfGram){
+    } else if (node->firstChild->nonTerminal == "<if>"){
         generateIfGram(node->firstChild);
         return;
-    } else if (node->firstChild->nodeType == eLoop){
+    } else if (node->firstChild->nonTerminal == "<loop>"){
         generateLoop(node->firstChild);
         return;
-    } else if (node->firstChild->nodeType == eAssign){
+    } else if (node->firstChild->nonTerminal == "<assign>"){
         generateAssign(node->firstChild);
         return;
     }
@@ -207,7 +219,7 @@ void generateIn (Node * node){
     if (node == NULL) {
         return; 
     }
-    fprintf(outFile, "READ %s\n", node->firstToken.identiToken);
+    outFile << "READ " << node-> firstToken.stringToken << "\n";
     return;
 }
 
@@ -217,125 +229,118 @@ void generateOut (Node * node){
     }
     generateExpr(node->firstChild);
     char* tempVar = createTempVar();
-    fprintf(outFile, "STORE %s\n", tempVar);
-    fprintf(outFile, "WRITE %s\n", tempVar);
+    outFile << "STORE " << tempVar << "\n";
+    outFile << "WRITE " << tempVar << "\n";
     return;
 }
 
-void generateIfGram (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    generateExpr(node->thirdChild);
-    char* tempVar = createTempVar();
-    fprintf(outFile, "STORE %s\n", tempVar);
-    generateExpr(node->firstChild);
-    fprintf(outFile, "SUB %s\n", tempVar);
-    char* label = createLabel();
-    if ((strcmp(node->secondChild->firstToken.identiToken, "<") == 0) && (strcmp(node->secondChild->secondToken.identiToken, "=") == 0)){
-        fprintf(outFile, "BRPOS %s\n", label);
-    } else if ((strcmp(node->secondChild->firstToken.identiToken,  ">") == 0) && (strcmp(node->secondChild->secondToken.identiToken, "=") == 0)){
-        fprintf(outFile, "BRNEG %s\n", label);
-    }  else if ((strcmp(node->secondChild->firstToken.identiToken, "=") == 0) && (strcmp(node->secondChild->secondToken.identiToken, "=") == 0)){
-        fprintf(outFile, "BRZERO %s\n", label);
-    } else if (strcmp(node->secondChild->firstToken.identiToken, "<") == 0){
-        fprintf(outFile, "BRZPOS %s\n", label);
-    } else if (strcmp(node->secondChild->firstToken.identiToken,  ">") == 0){
-        fprintf(outFile, "BRZNEG %s\n", label);
-    }  else if (strcmp(node->secondChild->firstToken.identiToken, "=") == 0){ 
-        fprintf(outFile, "BRNEG %s\n", label);
-        fprintf(outFile, "BRPOS %s\n", label);
-    } 
-    generateStat(node->fourthChild);
-    fprintf(outFile, "%s: NOOP\n", label);
-    return;
+
+void generateIfGram(Node* node){
+   if (node == NULL) {
+      return; 
+   }
+   generateExpr(node -> thirdChild);
+   char* tempVar = createTempVar();
+   outFile << "STORE " << tempVar << "\n";
+   generateExpr(node->firstChild);
+   outFile << "SUB " << tempVar << "\n";
+   char* label = createLabel();
+   if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == LessThanTk)){
+      outFile << "BRPOS " << label  << "\n";
+   }
+   else if((node -> secondChild -> firstToken.identiToken == GreaterThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+      outFile << "BRNEG " << label << "\n";
+   }
+   else if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+      outFile << "BRZERO " << label << "\n";
+   }
+   else if(node -> secondChild -> firstToken.identiToken == LessThanTk){
+      outFile << "BRZPOS " << label << "\n";
+   }
+   else if(node -> secondChild -> firstToken.identiToken == GreaterThanTk){
+      outFile << "BRZNEG " << label << "\n";
+   }
+   else if(node -> secondChild -> firstToken.identiToken == EqualsTk){
+      outFile << "BRNEG " << label << "\n";
+      outFile << "BRPOS " << label << "\n";
+   }
+   generateStat(node -> fourthChild);
+   outFile << label << ": NOOP\n";
+   return;
 }
 
 void generateLoop (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    char* label = createLabel();
-    fprintf(outFile, "%s: NOOP\n", label);
-    generateExpr(node->thirdChild);
-    char* tempVar = createTempVar();
-    fprintf(outFile, "STORE %s\n", tempVar);
-    generateExpr(node->firstChild);
-    fprintf(outFile, "SUB %s\n", tempVar);
-    char* label2 = createLabel();
-    if ((strcmp(node->secondChild->firstToken.identiToken, "<") == 0) && (strcmp(node->secondChild->secondToken.identiToken, "=") == 0)){
-        fprintf(outFile, "BRZNEG %s\n", label2);
-    } else if ((strcmp(node->secondChild->firstToken.identiToken,  ">") == 0) && (strcmp(node->secondChild->secondToken.identiToken, "=") == 0)){
-        fprintf(outFile, "BRPOS %s\n", label2);
-    }  else if ((strcmp(node->secondChild->firstToken.identiToken, "=") == 0) && (strcmp(node->secondChild->secondToken.identiToken, "=") == 0)){
-        fprintf(outFile, "BRNEG %s\n", label2);
-        fprintf(outFile, "BRPOS %s\n", label2);
-    }else if (strcmp(node->secondChild->firstToken.identiToken, "<") == 0){
-        fprintf(outFile, "BRNEG %s\n", label2);
-    } else if (strcmp(node->secondChild->firstToken.identiToken,  ">") == 0){
-        fprintf(outFile, "BRPOS %s\n", label2);
-    }  else if (strcmp(node->secondChild->firstToken.identiToken, "=") == 0){
-        fprintf(outFile, "BRZERO %s\n", label2);
-    }
-    generateStat(node->fourthChild);
-    fprintf(outFile, "BR %s\n", label);
-    fprintf(outFile, "%s: NOOP\n", label2);
-    return;
+   if (node == NULL) {
+      return; 
+   }
+   char* label = createLabel();
+   outFile << label << ": NOOP\n";
+   generateExpr(node->thirdChild);
+   char* tempVar = createTempVar();
+   outFile << "STORE " << tempVar << "\n";
+   generateExpr(node->firstChild);
+   outFile << "SUB " << tempVar << "\n";
+   char* label2 = createLabel();
+   if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == LessThanTk)){
+      outFile << "BRZPOS " << label2 << "\n";
+   }
+   else if((node -> secondChild -> firstToken.identiToken == GreaterThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+      outFile << "BRZNEG " << label2 << "\n";
+   }
+   else if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+      outFile << "BRZERO " << label2 << "\n";
+   }
+   else if(node -> secondChild -> firstToken.identiToken == LessThanTk){
+      outFile << "BRPOS " << label2 << "\n";
+   }                                                                                                   else if(node -> secondChild -> firstToken.identiToken == GreaterThanTk){
+      outFile << "BRNEG " << label2 << "\n";
+   }
+   else if(node -> secondChild -> firstToken.identiToken == EqualsTk){
+      outFile << "BRPOS " << label2 << "\n";
+      outFile << "BRNEG " << label2 << "\n";
+   }
+   
+   generateStat(node -> fourthChild);
+   outFile << "BR " << label << "\n";
+   outFile << label2 << ": NOOP\n";
+   return;
 }
 
 void generateAssign (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    generateExpr(node->firstChild);
-    fprintf(outFile, "STORE %s\n", node->firstToken.identiToken);
-    return;
+   if (node == NULL) {
+      return; 
+   }
+   generateExpr(node->firstChild);
+   outFile << "STORE " << node -> firstToken.stringToken << "\n";
+   return;
 }
 
 char* createTempVar(){
-    sprintf(newVar, "v%d", varCounter);
-    varCounter++;
-    return newVar;
+   sprintf(newVar, "V%d", varCounter);
+   varCounter++;
+   return newVar;
 }
 
 char* createLabel(){
-    sprintf(newLabel, "l%d", labelCounter);
-    labelCounter++;
-    return newLabel;
+   sprintf(newLabel, "L%d", labelCounter);
+   labelCounter++;
+   return newLabel;
 }
 
 void createVar(char* code){
-    createdVars[createdVarsCounter] = code;
-    createdVarsCounter++;
-    return;
+   createdVars[createdVarsCounter] = code;
+   createdVarsCounter++;
+   return;
 }
 
 void printVarsToFile(){
-    int i;
-    for(i = 0; i < createdVarsCounter; i++){
-        fprintf(outFile, "%s", createdVars[i]);
-        fprintf(outFile, ": 0\n");
-    }
-    for(i = 0; i < varCounter; i++){
-        sprintf(newVar, "v%d", i);
-        fprintf(outFile, "%s", newVar);
-        fprintf(outFile, ": 0\n");
-    }
-    // for(i = 0; i < labelCounter; i++){
-    //     //     sprintf(newLabel, "l%d", i);
-    //         //     fprintf(outFile, "%s", newLabel);
-    //             //     fprintf(outFile, "\n");
-    //                 // }
+   int i;
+   for(i = 0; i < createdVarsCounter; i++){
+      outFile << createdVars[i] << " 0\n";
+   }
+   for(i = 0; i < varCounter; i++){
+      sprintf(newVar, "V%d", i);
+      outFile << newVar << " 0\n";
+   }
 }
-    //
-    //                 void printNode (Node * node){
-    //                     std::cout << getNodeTokenName(node->nodeType)
-    //                         << ": " << getTokenName(node->firstToken.tokenId) 
-    //                             << "/" << node->firstToken.identiToken
-    //                                 << ": " << getTokenName(node->secondToken.tokenId) 
-    //                                     << "/" << node->secondToken.identiToken
-    //                                         << ": " << getTokenName(node->token2.tokenId) 
-    //                                             << "/" << node->token2.identiToken
-    //                                                 << "\n";
-    //                                                     return;
-    //                                                     }
+                                           

@@ -14,13 +14,13 @@ start
 
     in lob2;
 
-    cond (( lob1 >> lob2 ))
+    cond (( lob1 > > lob2 ))
 
     start
 
        var lob3 : 15
 
-       lob1 << lob1 + lob3;
+       lob1 < < lob1 + lob3;
 
        iterate (( lob2 < lob1 ))
 
@@ -28,7 +28,7 @@ start
 
           out lob2;
 
-          lob2 << lob2 + 1;
+          lob2 < < lob2 + 1;
 
        stop;
 
@@ -40,7 +40,7 @@ start
 
       out lob2;
 
-      lob2 << lob1 + [3 * lob2];
+      lob2 < < lob1 + [3 * lob2];
 
     stop;
 

@@ -6,7 +6,8 @@
 #include <string>
 #include <fstream>
 #include "parser.h"
-#include "semantics.h"
+//#include "semantics.h"
+#include "codeGen.h"
 using namespace std;
 
 ofstream outFile;
@@ -33,8 +34,9 @@ int main (int argc, char** argv){
 
       Node* node = parser();
       //treePrinted(node);
-      semantics(node, 0);
-
+      //semantics(node, 0);
+      generateCode(node);   
+   
       inFile.close();
       outFile.close();
    }
@@ -79,8 +81,9 @@ int main (int argc, char** argv){
       
       Node* node = parser();
       //treePrinted(node);
-      semantics(node, 0);
-   
+      //semantics(node, 0);
+      generateCode(node);
+
       inFile.close();
       outFile.close();
    }

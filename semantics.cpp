@@ -15,35 +15,6 @@ Token stack[maxStack];
 int totVarCount = 0; //keep track of the total number of variables
 int currScpFirstEle = 0; //keep track of the starting position of current scope
 
-/*
-int varCount = 0;
-char newVar[9];
-int labelCount = 0;
-char newLabel[9];
-char* varsCreated[1000];
-int varsCreatedCount = 0;
-void varCreator(char* code);
-char* tempVarCreator();
-char* labelCreator(); 
-
-char* tempVarCreator(){
-    sprintf(newVar, "TV%d", varCount);
-    varCount++;
-    return newVar;
-}
-
-char* labelCreator(){
-    sprintf(newLabel, "L%d", labelCount);
-    labelCount++;
-    return newLabel;
-}
-
-void varCreator(char* code){
-    varsCreated[varsCreatedCount] = code;
-    varsCreatedCount++;
-    return;
-}
-*/
 static int varTempCounter = 0;
 static int labelCounter = 0;
 string tempVarsCreated[maxStack];
@@ -53,7 +24,7 @@ void varTempArrays(){
       tempVarsCreated[i] = "";
 }
 string getVarTemp(){
-   string tempVarCreated = "TV" + to_string(varTempCounter + 1);
+   string tempVarCreated = "V" + to_string(varTempCounter + 1);
    tempVarsCreated[varTempCounter] = tempVarCreated;
    varTempCounter++;
    return tempVarCreated;

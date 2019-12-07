@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "node.h"
 
-extern FILE* outFile;
+extern ofstream outFile;
 
 void generateCode(Node* node);
 
