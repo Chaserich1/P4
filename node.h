@@ -20,7 +20,8 @@ struct Node{
    Token firstToken;
    Token secondToken;
    Token thirdToken;
-
+   
+   //default constructor
    Node(){
       this -> nonTerminal = "";
       this -> treeDepth = 0;

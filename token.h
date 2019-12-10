@@ -27,14 +27,14 @@ struct Token{
    idTokens identiToken;
    string stringToken;
    int lineNum;
-   char tokenInstance[9];
+   char str[100];
 
    //default constr token starts as an error but can change, if it doesn't change then it is an error
    Token(){
       this -> identiToken = ErrorTk;
       this -> stringToken = "";
       this -> lineNum = 0;
-   }
+   }   
 
    //Token
    Token(idTokens identiToken, string stringToken, int lineNum){

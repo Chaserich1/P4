@@ -9,309 +9,285 @@ char newVar[9];
 int labelCounter = 0;
 char newLabel[9];
 
-char* createdVars[1000];
-int createdVarsCounter = 0;
+int variableCounter = 1;
+char newVariable[9];
 
-void createVar(char* code);
-char* createTempVar();
-char* createLabel();
-
-void printVarsToFile();
-
-void generateProgram (Node * node);
-void generateBlock (Node * node);
-void generateVars (Node * node);
-void generateExpr (Node * node);
-void generateA (Node * node);
-void generateN(Node* node);
-void generateM (Node * node);
-void generateR (Node * node);
-void generateStats (Node * node);
-void generateMStat (Node * node);
-void generateStat (Node * node);
-void generateIn (Node * node);
-void generateOut (Node * node);
-void generateIfGram (Node * node);
-void generateLoop (Node * node);
-void generateAssign (Node * node);
-
-//void printNode (Node * node);
-
-void generateCode(Node* node) {
+void codeGen(Node* node){
    if(node == NULL){
       return; 
    }
-   generateProgram(node);
+   programGen(node);
    outFile << "STOP \n";
-   printVarsToFile();
+   declareVars();
 }
 
-void generateProgram(Node* node){
+void programGen(Node* node){
    if(node == NULL){
       return; 
    }
-   generateVars(node->firstChild);
-   generateBlock(node->secondChild);
+   varsGens(node-> firstChild);
+   blockGen(node-> secondChild);
    return;
 }
 
-void generateBlock(Node* node){
+void blockGen(Node* node){
    if(node == NULL){
       return; 
    }
-   generateVars(node->firstChild);
-   generateStats(node->secondChild);
+   varsGens(node-> firstChild);
+   statsGen(node-> secondChild);
    return;
 }
 
-void generateVars(Node* node){
+void varsGens(Node* node){
    if(node == NULL){
       return; 
    }
-   createVar(node->firstToken.tokenInstance);
-   generateVars(node->firstChild);
+   createVariable();
+   varsGens(node-> firstChild);
    return;
 }
 
-void generateExpr(Node* node){
+void exprGen(Node* node){
    if(node == NULL){
       return; 
    }
 
-   if (node->secondChild != NULL) {
-      generateExpr(node->secondChild);
+   if(node-> secondChild != NULL){
+      exprGen(node-> secondChild);
       char* tempVar = createTempVar();
       outFile << "STORE " << tempVar << "\n";
-      generateA(node->firstChild);
-      if (node -> firstToken.identiToken == PlusTk) {
+      AGen(node-> firstChild);
+      if(node-> firstToken.identiToken == PlusTk){
          outFile << "ADD " << tempVar << "\n";
          return;
       }
    }else{
-      generateA(node->firstChild);
+      AGen(node-> firstChild);
       return;
    }
 }
 
-void generateA(Node* node){
+void AGen(Node* node){
    if(node == NULL){
       return;
    }
-   if(node -> secondChild != NULL){
-      generateA(node -> secondChild);
+   if(node-> secondChild != NULL){
+      AGen(node-> secondChild);
       char* tempVar = createTempVar();
       outFile << "STORE " << tempVar << "\n";
-      generateN(node -> firstChild);
-      if(node -> firstToken.identiToken == MinusTk){
+      NGen(node-> firstChild);
+      if(node-> firstToken.identiToken == MinusTk){
          outFile << "SUB " << tempVar << "\n";
          return;
       }
    }else{
-      generateN(node -> firstChild);
+      NGen(node-> firstChild);
       return;
    }
 }
 
-void generateN (Node* node) {
-    if (node == NULL) {
-        return; 
-    }
-
-    if (node->secondChild != NULL) {
-        generateN(node->secondChild);
-        char* tempVar = createTempVar();
-        outFile << "STORE " << tempVar << "\n";
-        generateM(node -> firstChild);
-        if (node -> firstToken.identiToken == DivideTk){
-            outFile << "DIV " << tempVar << "\n";
-            return;
-        } else {
-            outFile << "MULT " << tempVar << "\n";
-            return;
-        }
-    } else {
-        generateM(node->firstChild);
-        return;
-    }
-
-}
-
-void generateM (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    
-    if(node -> firstToken.identiToken == MinusTk){
-      generateM(node -> firstChild);
-      outFile << "MULT -1\n";
-      return;
-    }else{
-      generateR(node -> firstChild);
-      return;
-   }
-}
-
-void generateR (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    if(node->firstChild != NULL){
-        generateExpr(node->firstChild);
-        return;
-    } else if (node->firstToken.identiToken == IdTk) {
-         outFile << "LOAD " << node -> firstToken.stringToken << "\n";
-        return;
-    } else if (node->firstToken.identiToken == IntTk) {
-         outFile << "LOAD " << node -> firstToken.stringToken << "\n";
-        return;
-    }
-}
-
-void generateStats (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    
-    generateStat(node->firstChild);
-    generateMStat(node->secondChild);
-    return;
-}
-
-void generateMStat (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-
-    if (node->firstChild != NULL){
-        generateStat(node->firstChild);
-        generateMStat(node->secondChild);
-        return;
-    }
-    return;
-}
-
-void generateStat (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    if (node->firstChild->nonTerminal == "<in>"){
-        generateIn(node->firstChild);
-        return;
-    } else if (node->firstChild->nonTerminal == "<out>"){
-        generateOut(node->firstChild);
-        return;
-    } else if (node->firstChild->nonTerminal == "<block>"){
-        generateBlock(node->firstChild);
-        return;
-    } else if (node->firstChild->nonTerminal == "<if>"){
-        generateIfGram(node->firstChild);
-        return;
-    } else if (node->firstChild->nonTerminal == "<loop>"){
-        generateLoop(node->firstChild);
-        return;
-    } else if (node->firstChild->nonTerminal == "<assign>"){
-        generateAssign(node->firstChild);
-        return;
-    }
-}
-
-void generateIn (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    outFile << "READ " << node-> firstToken.stringToken << "\n";
-    return;
-}
-
-void generateOut (Node * node){
-    if (node == NULL) {
-        return; 
-    }
-    generateExpr(node->firstChild);
-    char* tempVar = createTempVar();
-    outFile << "STORE " << tempVar << "\n";
-    outFile << "WRITE " << tempVar << "\n";
-    return;
-}
-
-
-void generateIfGram(Node* node){
-   if (node == NULL) {
+void NGen(Node* node){
+   if(node == NULL){
       return; 
    }
-   generateExpr(node -> thirdChild);
+
+   if(node-> secondChild != NULL){
+       NGen(node-> secondChild);
+       char* tempVar = createTempVar();
+       outFile << "STORE " << tempVar << "\n";
+       MGen(node-> firstChild);
+       if(node-> firstToken.identiToken == DivideTk){
+          outFile << "DIV " << tempVar << "\n";
+          return;
+       }else{
+           outFile << "MULT " << tempVar << "\n";
+           return;
+       }
+   }else{
+       MGen(node-> firstChild);
+       return;
+   }
+}
+
+void MGen(Node* node){
+   if (node == NULL){
+       return; 
+   }
+   
+   if(node-> firstToken.identiToken == MinusTk){
+     MGen(node-> firstChild);
+     outFile << "MULT -1\n";
+     return;
+   }else{
+     RGen(node-> firstChild);
+     return;
+  }
+}
+
+void RGen(Node* node){
+   if(node == NULL){
+      return; 
+   }
+
+   if(node-> firstChild != NULL){
+      exprGen(node-> firstChild);
+      return;
+   }else if(node-> firstToken.identiToken == IdTk){
+      outFile << "LOAD " << node-> firstToken.stringToken << "\n";
+      return;
+   }else if(node-> firstToken.identiToken == IntTk){
+      outFile << "LOAD " << node-> firstToken.stringToken << "\n";
+      return;
+   }
+}
+
+void statsGen(Node* node){
+   if(node == NULL){
+      return; 
+   }
+   
+   statGen(node-> firstChild);
+   mstatGen(node-> secondChild);
+   return;
+}
+
+void mstatGen(Node* node){
+   if(node == NULL){
+      return; 
+   }
+
+   if(node-> firstChild != NULL){
+      statGen(node-> firstChild);
+      mstatGen(node-> secondChild);
+      return;
+   }
+   return;
+}
+
+void statGen(Node* node){
+   if(node == NULL){
+      return; 
+   }
+   if(node-> firstChild-> nonTerminal == "<in>"){
+      inGen(node-> firstChild);
+      return;
+   }else if(node-> firstChild-> nonTerminal == "<out>"){
+      outGen(node-> firstChild);
+      return;
+   }else if(node-> firstChild-> nonTerminal == "<block>"){
+      blockGen(node-> firstChild);
+      return;
+   }else if(node-> firstChild-> nonTerminal == "<if>"){
+      ifGen(node-> firstChild);
+      return;
+   }else if(node-> firstChild-> nonTerminal == "<loop>"){
+      loopGen(node-> firstChild);
+      return;
+   }else if(node-> firstChild-> nonTerminal == "<assign>"){
+      AGenssign(node-> firstChild);
+      return;
+   }
+}
+
+void inGen(Node* node){
+   if(node == NULL){
+      return; 
+   }
+   outFile << "READ " << node-> firstToken.stringToken << "\n";
+   return;
+}
+
+void outGen(Node* node){
+   if(node == NULL){
+       return; 
+   }
+   exprGen(node-> firstChild);
    char* tempVar = createTempVar();
    outFile << "STORE " << tempVar << "\n";
-   generateExpr(node->firstChild);
+   outFile << "WRITE " << tempVar << "\n";
+   return;
+}
+
+
+void ifGen(Node* node){
+   if (node == NULL){
+      return; 
+   }
+   exprGen(node-> thirdChild);
+   char* tempVar = createTempVar();
+   outFile << "STORE " << tempVar << "\n";
+   exprGen(node-> firstChild);
    outFile << "SUB " << tempVar << "\n";
    char* label = createLabel();
-   if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == LessThanTk)){
+   if((node-> secondChild-> firstToken.identiToken == LessThanTk) && (node-> secondChild-> secondToken.identiToken == LessThanTk)){
       outFile << "BRPOS " << label  << "\n";
    }
-   else if((node -> secondChild -> firstToken.identiToken == GreaterThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+   else if((node-> secondChild-> firstToken.identiToken == GreaterThanTk) && (node-> secondChild-> secondToken.identiToken == GreaterThanTk)){
       outFile << "BRNEG " << label << "\n";
    }
-   else if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+   else if((node-> secondChild-> firstToken.identiToken == LessThanTk) && (node-> secondChild-> secondToken.identiToken == GreaterThanTk)){
       outFile << "BRZERO " << label << "\n";
    }
-   else if(node -> secondChild -> firstToken.identiToken == LessThanTk){
+   else if(node-> secondChild-> firstToken.identiToken == LessThanTk){
       outFile << "BRZPOS " << label << "\n";
    }
-   else if(node -> secondChild -> firstToken.identiToken == GreaterThanTk){
+   else if(node-> secondChild-> firstToken.identiToken == GreaterThanTk){
       outFile << "BRZNEG " << label << "\n";
    }
-   else if(node -> secondChild -> firstToken.identiToken == EqualsTk){
+   else if(node-> secondChild-> firstToken.identiToken == EqualsTk){
       outFile << "BRNEG " << label << "\n";
       outFile << "BRPOS " << label << "\n";
    }
-   generateStat(node -> fourthChild);
+   statGen(node-> fourthChild);
    outFile << label << ": NOOP\n";
    return;
 }
 
-void generateLoop (Node * node){
-   if (node == NULL) {
+void loopGen(Node* node){
+   if(node == NULL){
       return; 
    }
-   char* label = createLabel();
-   outFile << label << ": NOOP\n";
-   generateExpr(node->thirdChild);
+   char* label1 = createLabel();
+   outFile << label1 << ": NOOP\n";
+   exprGen(node-> thirdChild);
    char* tempVar = createTempVar();
    outFile << "STORE " << tempVar << "\n";
-   generateExpr(node->firstChild);
+   exprGen(node-> firstChild);
    outFile << "SUB " << tempVar << "\n";
    char* label2 = createLabel();
-   if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == LessThanTk)){
+   if((node-> secondChild-> firstToken.identiToken == LessThanTk) && (node-> secondChild-> secondToken.identiToken == LessThanTk)){
       outFile << "BRZPOS " << label2 << "\n";
    }
-   else if((node -> secondChild -> firstToken.identiToken == GreaterThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+   else if((node-> secondChild-> firstToken.identiToken == GreaterThanTk) && (node-> secondChild-> secondToken.identiToken == GreaterThanTk)){
       outFile << "BRZNEG " << label2 << "\n";
    }
-   else if((node -> secondChild -> firstToken.identiToken == LessThanTk) && (node -> secondChild -> secondToken.identiToken == GreaterThanTk)){
+   else if((node-> secondChild-> firstToken.identiToken == LessThanTk) && (node-> secondChild-> secondToken.identiToken == GreaterThanTk)){
       outFile << "BRZERO " << label2 << "\n";
    }
-   else if(node -> secondChild -> firstToken.identiToken == LessThanTk){
+   else if(node-> secondChild-> firstToken.identiToken == LessThanTk){
       outFile << "BRPOS " << label2 << "\n";
-   }                                                                                                   else if(node -> secondChild -> firstToken.identiToken == GreaterThanTk){
-      outFile << "BRNEG " << label2 << "\n";
    }
-   else if(node -> secondChild -> firstToken.identiToken == EqualsTk){
+   else if(node-> secondChild-> firstToken.identiToken == GreaterThanTk){
+     outFile << "BRNEG " << label2 << "\n";
+   }
+   else if(node-> secondChild-> firstToken.identiToken == EqualsTk){
       outFile << "BRPOS " << label2 << "\n";
       outFile << "BRNEG " << label2 << "\n";
    }
    
-   generateStat(node -> fourthChild);
-   outFile << "BR " << label << "\n";
+   statGen(node-> fourthChild);
+   outFile << "BR " << label1 << "\n";
    outFile << label2 << ": NOOP\n";
    return;
 }
 
-void generateAssign (Node * node){
-   if (node == NULL) {
+void AGenssign (Node* node){
+   if(node == NULL){
       return; 
    }
-   generateExpr(node->firstChild);
-   outFile << "STORE " << node -> firstToken.stringToken << "\n";
+   exprGen(node-> firstChild);
+   outFile << "STORE " << node-> firstToken.stringToken << "\n";
    return;
 }
 
@@ -327,16 +303,17 @@ char* createLabel(){
    return newLabel;
 }
 
-void createVar(char* code){
-   createdVars[createdVarsCounter] = code;
-   createdVarsCounter++;
-   return;
+char* createVariable(){
+   sprintf(newVariable, "x%d", variableCounter);
+   variableCounter++;
+   return newVariable;
 }
 
-void printVarsToFile(){
+void declareVars(){
    int i;
-   for(i = 0; i < createdVarsCounter; i++){
-      outFile << createdVars[i] << " 0\n";
+   for(i = 1; i < variableCounter; i++){
+      sprintf(newVariable, "x%d", i);
+      outFile << newVariable << " 0\n";
    }
    for(i = 0; i < varCounter; i++){
       sprintf(newVar, "V%d", i);
